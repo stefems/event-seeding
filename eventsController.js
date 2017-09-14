@@ -1,3 +1,4 @@
+//_________________________________
 //Node Utils_______________________
 const request = require('request');
 const jsdom = require('jsdom');
@@ -6,6 +7,8 @@ const fs = require('fs');
 const express = require('express');
 const router = express.Router();
 
+//_________________________________
+//ENV setup________________________
 var env, access_token;
 fs.stat(".env/.env.js", function(err, stat) {
 	if(err == null) {
@@ -38,8 +41,9 @@ firebase.auth().signInWithEmailAndPassword("kowalmax.s@gmail.com", "testtest").c
 	console.log(error.code);
 	console.log(error.message);
 });
-//_________________________________
 
+//_________________________________
+//ROUTES___________________________
 router.get('/events/:lat/:lng', (req, res) => {
 	res.send('working');
 	console.log("working");
@@ -64,19 +68,19 @@ router.get('/events/:lat/:lng', (req, res) => {
 	// 		console.log("failed to hit the yelp api");
 	// 	}
 	// });
-	request(options, function(error, response, body) {
-		if (error) {
-			console.log("error sending a request to the yelp api.");
-		}
-		else if (JSON.parse(body)){
-			JSON.parse(body).businesses.forEach(function(business) {
-				getBusinessWebsiteFromYelp(business.url, business.name);
-			});
-		}
-		else {
-			console.log("failed to hit the yelp api");
-		}
-	});
+	// request(options, function(error, response, body) {
+	// 	if (error) {
+	// 		console.log("error sending a request to the yelp api.");
+	// 	}
+	// 	else if (JSON.parse(body)){
+	// 		JSON.parse(body).businesses.forEach(function(business) {
+	// 			getBusinessWebsiteFromYelp(business.url, business.name);
+	// 		});
+	// 	}
+	// 	else {
+	// 		console.log("failed to hit the yelp api");
+	// 	}
+	// });
 
 	function getBusinessWebsiteFromYelp(yelpURL, businessName) {
 		var options = {
