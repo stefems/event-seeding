@@ -258,7 +258,7 @@ function getMoreEventsAtLocation(lat, long, queryData, res) {
 						image: event.cover
 					};
 					request.post({
-			            url: 'http://localhost:3000/events/' + event.place.id,
+			            url: '/events/' + event.place.id,
 			            form: data
 			        }, function (error, response, body) {
 						if (error) {
