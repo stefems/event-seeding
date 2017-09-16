@@ -1,21 +1,19 @@
 function getLocation() {
-  getEvents(39.707056800000004, -104.9838707);
-	// Try HTML5 geolocation.
-  // if (navigator.geolocation) {
-  //   navigator.geolocation.getCurrentPosition(function(position) {
-  //     var pos = {
-  //       lat: position.coords.latitude,
-  //       long: position.coords.longitude
-  //     };
-  //     console.log(pos.lat, pos.long);
-  //     getEvents(pos.lat, pos.long);
-  //   }, function() {
-  //     console.log("error getting location data.");
-  //   });
-  // } 
-  // else {
-  // 	console.log("Browser does not support HTML5 geolocation.");
-  // }
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function(position) {
+      var pos = {
+        lat: position.coords.latitude,
+        long: position.coords.longitude
+      };
+      console.log(pos.lat, pos.long);
+      getEvents(pos.lat, pos.long);
+    }, function() {
+      console.log("error getting location data.");
+    });
+  } 
+  else {
+  	console.log("Browser does not support HTML5 geolocation.");
+  }
 }
 
 function getEvents(lat, long) {
