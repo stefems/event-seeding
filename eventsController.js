@@ -247,7 +247,7 @@ function getMoreEventsAtLocation(lat, long, queryData, res) {
 				let events = JSON.parse(body).data;
 				// console.log("found " + events.length + " events for " + url);
 				events.forEach(function(event) {
-					let event = {
+					event = {
 						name: event.name,
 						location: event.place.location.street + " " + event.place.location.city + ", " + event.place.location.state,
 						facebook_id: event.id,
