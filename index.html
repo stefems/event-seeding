@@ -14,7 +14,19 @@
 	</head>	
 	<body>
 		<h1>Nationalized Data</h1>
-		<button onclick="getLocation()">Click to Get Location</button>
+		Search Radius in Meters:
+		<input id="radius" type="text" name="radius in meters" value="15"><br>
+		Event Type: <br>
+		<input id="hiking" type="checkbox" name="type" value="Hiking" checked> Hiking<br>
+		<input id="climbing" type="checkbox" name="type" value="Climbing"> Climbing<br>
+		<input id="music" type="checkbox" name="type" value="Live Music"> Live Music<br>
+		<input id="running" type="checkbox" name="type" value="Running"> Running<br>
+
+		<button onclick="getLocation()">Click to Get Events</button>
+
+		<div id="eventRenderLocation">
+			
+		</div>
 	</body>
 </html>
 
