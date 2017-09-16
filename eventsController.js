@@ -247,7 +247,7 @@ function getMoreEventsAtLocation(lat, long, queryData, res) {
 				let events = JSON.parse(body).data;
 				// console.log("found " + events.length + " events for " + url);
 				events.forEach(function(event) {
-					let data = {
+					let event = {
 						name: event.name,
 						location: event.place.location.street + " " + event.place.location.city + ", " + event.place.location.state,
 						facebook_id: event.id,
@@ -257,18 +257,27 @@ function getMoreEventsAtLocation(lat, long, queryData, res) {
 						description: event.description,
 						image: event.cover
 					};
-					request.post({
-			            url: '/events/' + event.place.id,
-			            form: data
-			        }, function (error, response, body) {
-						if (error) {
-							console.log("post error");
-							// console.log(error);
-						}
-						else {
-							// console.log("no post error");
-						}
+					//CREATE ONE EVENT
+					let tags = [];
+					let setting = database.ref("event_sources/" + event.host + "@" + req.params.owner + '/eventListing/' + event.name + "@" + event.facebook_id).set(event);
+					setting.then(function() {
+						res.send({"status": "success", "message": "saved event to firebase.", "event": event});
+					}).catch(function() {
+						res.send({"status": "failure", "message": "firebase save on event failed."});
 					});
+					res.send({"saved": event});
+					// request.post({
+			  //           url: '/events/' + event.place.id,
+			  //           form: data
+			  //       }, function (error, response, body) {
+					// 	if (error) {
+					// 		console.log("post error");
+					// 		// console.log(error);
+					// 	}
+					// 	else {
+					// 		// console.log("no post error");
+					// 	}
+					// });
 				});
 				if (JSON.parse(body).paging && JSON.parse(body).paging.next) {
 					acquireEvents(JSON.parse(body).paging.next);
