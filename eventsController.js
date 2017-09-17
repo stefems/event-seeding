@@ -9,37 +9,45 @@ const router = express.Router();
 
 //_________________________________
 //ENV setup________________________
-var env, access_token;
+var env, access_token, database;
 fs.stat(".env/.env.js", function(err, stat) {
 	if(err == null) {
-		console.log("dev");
+		// console.log("dev");
 		env = require("./.env/.env.js");
 	} 
 	else if(err.code == 'ENOENT') {
-		console.log("prod");
+		// console.log("prod");
 		env = {
 			facebookAppId: process.env.facebookAppId,
-			facebookAppSecret: process.env.facebookAppSecret
+			facebookAppSecret: process.env.facebookAppSecret,
+			mapboxToken: process.env.mapboxToken,
+			firebaseKey: process.env.firebaseKey,
+			firebaseDomain: process.env.firebaseDomain,
+			firebaseURL: process.env.firebaseURL,
+			firebaseBucket: process.env.firebaseBucket,
+			firebaseUser: process.env.firebaseUser,
+			firebasePassword: process.env.firebasePassword,
+			googleMapsToken: process.env.googleMapsToken
 		};
 	}
 	access_token = env.facebookAppId + "|" + env.facebookAppSecret;
-});
-//_________________________________
-//Firebase Setup___________________
-var firebase = require("firebase");
-var config = {
-  apiKey: "AIzaSyByp6ZYTYrwQ4M0g4h2C1pDtyMUI08LA0g",
-  authDomain: "nationaldata-fcd92.firebaseapp.com",
-  databaseURL: "https://nationaldata-fcd92.firebaseio.com",
-  storageBucket: "nationaldata-fcd92.appspot.com",
-};
-firebase.initializeApp(config);
-var database = firebase.database();
-//signInWithEmailAndPassword or createUserWithEmailAndPassword
-firebase.auth().signInWithEmailAndPassword("kowalmax.s@gmail.com", "testtest").catch(function(error) {
-	// Handle Errors here.
-	console.log(error.code);
-	console.log(error.message);
+	//_________________________________
+	//Firebase Setup___________________
+	var firebase = require("firebase");
+	var config = {
+	  apiKey: env.firebaseKey,
+	  authDomain: env.firebaseDomain,
+	  databaseURL: env.firebaseURL,
+	  storageBucket: env.firebaseBucket
+	};
+	firebase.initializeApp(config);
+	database = firebase.database();
+	//signInWithEmailAndPassword or createUserWithEmailAndPassword
+	firebase.auth().signInWithEmailAndPassword(env.firebaseUser, env.firebasePassword).catch(function(error) {
+		// Handle Errors here.
+		console.log(error.code);
+		console.log(error.message);
+	});
 });
 
 //_________________________________
@@ -65,11 +73,9 @@ function getMoreEventsAtLocation(lat, long, queryData, res) {
 		results.forEach( (placeList) => {
 			let timeoutDelay = 250;
 			placeList.forEach((place) => {
-				setTimeout(getPlaceDetails, timeoutDelay, place);
-				timeoutDelay += 250;
+				getPlaceDetails(place);
 			});
 		});
-	    res.json(results);
 	});
 
 	//Send a request to get maps data for each event type
@@ -102,10 +108,13 @@ function getMoreEventsAtLocation(lat, long, queryData, res) {
 					function cursorGMapsRequest(lat, long, queryData, eventType, url, results) {
 						results = results || [];
 						url = url || "https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=" + lat + "," + long +
-						"&radius=" + queryData.radius + "&keyword=" + eventType + "&key=AIzaSyAC4bVTmV7z7rkLOVmXgxlRBsuYOqaAvQU";
+						"&radius=" + queryData.radius + "&keyword=" + eventType + "&key=" + env.googleMapsToken;
 						request(url, (error, response, body) => {
 							body = JSON.parse(body);
 							if (!error && response.statusCode === 200) {
+								body.results.forEach( (place) => {
+									place.rageLifeTag = eventType;
+								});
 								results = results.concat(body.results);
 								if (body.next_page_token) {
 									url = url.split("&pagetoken=")[0] + "&pagetoken=" + body.next_page_token;
@@ -131,147 +140,171 @@ function getMoreEventsAtLocation(lat, long, queryData, res) {
 	}
 
 	function getPlaceDetails(place) {
-		let url = "https://maps.googleapis.com/maps/api/place/details/json?placeid=" + place.place_id + "&key=AIzaSyAC4bVTmV7z7rkLOVmXgxlRBsuYOqaAvQU"
-		request(url, function(error, response, body) {
-			if (!error && response.statusCode === 200) {
-				body = JSON.parse(body);
-				if (body.result.website && (body.result.website !== "undefined")) {
-					getFacebookPageFromWebsite(body.result.website);
+		if (place) {
+			let url = "https://maps.googleapis.com/maps/api/place/details/json?placeid=" + place.place_id + "&key=" + env.googleMapsToken;
+			request(url, function(error, response, body) {
+				if (!error && response.statusCode === 200) {
+					body = JSON.parse(body);
+					if (body.result.website && (body.result.website !== "undefined")) {
+						getFacebookPageFromWebsite(body.result.website, place.rageLifeTag);
+					}
 				}
-			}
-			else {
-				console.log(error);
-			}
-		});
+				else {
+					console.log(error);
+				}
+			});
+		}
+		else {
+			console.log("somehow got an empty place.");
+		}
 	}
 }
 
-	function getBusinessWebsiteFromYelp(yelpURL, businessName) {
-		var options = {
-			url: yelpURL,
-			headers: {
-				"user-agent": "Chrome/51.0.2704.103"
-			}
-		};
-		request(options, function (error, response, body) {
-			if (!error) {
-				try {
-					const dom = new JSDOM(body);
-					let websiteURL;
-					let urlSpan = dom.window.document.getElementsByClassName("biz-website")[0];
-					if (urlSpan && urlSpan.children[1] && urlSpan.children[1].innerHTML) {
-						websiteURL = urlSpan.children[1].innerHTML;
-						websiteURL = processUrl(websiteURL);
-						getFacebookPageFromWebsite(websiteURL);
-					}
-					else {
-						console.log("yelp didn't have a url for " + businessName);
-					}
-				}
-				catch (e) {
-					console.log('jsdom error.');
-				}
-			}
-			else {
-				console.log("error requesting the business website.");
-			}
-		});
-	}
-	function processUrl(businessURL) {
-		if (businessURL.indexOf("www.") === -1 && businessURL.indexOf("http") === -1) {
-			return "http://www." + businessURL;
+function getFacebookPageFromWebsite(businessWebsite, type) {
+	var options = {
+		url: businessWebsite,
+		headers: {
+			"user-agent": "Chrome/51.0.2704.103"
 		}
-	}
-	function getFacebookPageFromWebsite(businessWebsite) {
-		var options = {
-			url: businessWebsite,
-			headers: {
-				"user-agent": "Chrome/51.0.2704.103"
-			}
-		};
-		request(options, function (error, response, body) {
-			if (!error) {
-				try {
-					const dom = new JSDOM(body);
-					let found = false;
-					var aTags = dom.window.document.getElementsByTagName("a");
-					for (let i = 0; i < aTags.length; i++) {
-						if (aTags[i].getAttribute("href") && aTags[i].getAttribute("href").indexOf("facebook.com") !== -1) {
-							getFacebookEvents(aTags[i].getAttribute("href"));
-							found = true;
-							break;
-						}
-					}
-					if (!found) {
-						console.log("failed to find a facebook link for " + options.url);
+	};
+	request(options, function (error, response, body) {
+		if (!error) {
+			try {
+				const dom = new JSDOM(body);
+				let found = false;
+				var aTags = dom.window.document.getElementsByTagName("a");
+				for (let i = 0; i < aTags.length; i++) {
+					if (aTags[i].getAttribute("href") && aTags[i].getAttribute("href").indexOf("facebook.com") !== -1) {
+						getFacebookEvents(aTags[i].getAttribute("href"), type);
+						found = true;
+						break;
 					}
 				}
-				catch(e) {
-					console.log("jsdom error.");
+				if (!found) {
+					console.log("failed to find a facebook link for " + options.url);
 				}
 			}
-			else {
-				console.log("error loading business website: " + options.url);
+			catch(e) {
+				console.log("jsdom error.");
 			}
-		});
-	}
-	function getFacebookEvents(pageURL) {
-		//get the name from the facebook.com/
-		let nameIndex = pageURL.indexOf("facebook.com/") + "facebook.com/".length;
-		let name = pageURL.substring(nameIndex);
-		name = name.split("/")[0];
-		//send request for events
-		var untilValue;
-		let date = new Date();
-		if (date.getMonth() === 12 || date.getMonth() === 11) {
-			//set the until to year++/2/15
-			untilValue = (date.getFullYear + 2) + "-1-15";
 		}
 		else {
-			untilValue = date.getFullYear() + "-" + (date.getMonth() + 2) + "-15";  
+			console.log("error loading business website: " + options.url);
 		}
-		let url = "https://graph.facebook.com/" + name + "/events?fields=is_cancelled,name,place,owner,description,category,start_time&until=" + untilValue + "&since=now&access_token=" + access_token;
-		acquireEvents(url);
+	});
+}
+
+function getFacebookEvents(pageURL, type) {
+	//get the name from the facebook.com/
+	let nameIndex = pageURL.indexOf("facebook.com/") + "facebook.com/".length;
+	let name = pageURL.substring(nameIndex);
+	name = name.split("/")[0];
+	//send request for events
+	var untilValue;
+	let date = new Date();
+	if (date.getMonth() === 12 || date.getMonth() === 11) {
+		//set the until to year++/2/15
+		untilValue = (date.getFullYear + 2) + "-1-15";
 	}
-	function acquireEvents(url) {
-		// console.log("acquiring events for " + url);
-		request(url, function (error, response, body) {
-			if (error) {
-				console.log('error loading facebook events');
-				// console.log(error + " " + url);
+	else {
+		untilValue = date.getFullYear() + "-" + (date.getMonth() + 2) + "-15";  
+	}
+	let url = "https://graph.facebook.com/" + name + "/events?fields=is_cancelled,name,place,owner,description,category,start_time&until=" + untilValue + "&since=now&access_token=" + access_token;
+	acquireEvents(url, type);
+}
+
+function acquireEvents(url, type) {
+	// console.log("acquiring events for " + url);
+	request(url, function (error, response, body) {
+		if (error) {
+			console.log('error loading facebook events');
+			// console.log(error + " " + url);
+		}
+		else if (!JSON.parse(body) || !JSON.parse(body).data) {
+			// console.log("incorrect facebook url: " + url);
+		}
+		else {
+			let events = JSON.parse(body).data;
+			events.forEach(function(event) {
+				event.rageLifeTag = type;
+				saveEvent(event);
+			});
+			if (JSON.parse(body).paging && JSON.parse(body).paging.next) {
+				acquireEvents(JSON.parse(body).paging.next);
 			}
-			else if (!JSON.parse(body) || !JSON.parse(body).data) {
-				console.log("incorrect facebook url: " + url);
+		}
+	});
+}
+function saveEvent(event) {
+	// need to get the geocode lat long for this address
+	let address = "";
+	// TODO: better clean this string for geocoding request
+	if (event.place.location) {
+		address = (event.place.location.street || "") + " " + event.place.location.city + ", " + event.place.location.state;
+	}
+	var geocodePromise = new Promise ( (resolve, reject) => {
+		if (address.length > 0 && address.indexOf("undefined") === -1) {
+			address = encodeURIComponent(address);
+			let url = "https://api.mapbox.com/geocoding/v5/mapbox.places/" + address + ".json?access_token=" + env.mapboxToken;
+			request(url, (error, response, body) => {
+				if (!error && response.statusCode === 200) {
+					body = JSON.parse(body);
+					if (body.features[0]) {
+						let coordinates = body.features[0].center;
+						resolve(coordinates);
+					}
+					else {
+						console.log("no results from mapbox");
+						reject();
+					}
+				}
+				else {
+					console.log(error);
+					console.log("failed to get the lat/long from mapbox");
+					reject();
+				}
+			});
+		}
+		else {
+			console.log("empty address: " + address);
+			reject();
+		}
+	});
+	geocodePromise.then( (coordinates) => {
+		let newEvent = {
+			name: event.name || "",
+			location: address,
+			facebook_id: event.id || "",
+			host: event.place.name || "",
+			start_time: event.start_time || "",
+			category: event.category || "",
+			description: event.description || "",
+			image: event.cover || "",
+			tag: event.rageLifeTag || "",
+			coordinates: coordinates
+		};
+		let dbRef = "event_sources/" + event.place.id + '/eventListing/' + newEvent.facebook_id;
+		database.ref(dbRef).once("value", function(snapshot) {
+			if (snapshot.val()) {
+				console.log("event already created.");
 			}
 			else {
-				let events = JSON.parse(body).data;
-				// console.log("found " + events.length + " events for " + url);
-				events.forEach(function(event) {
-					let newEvent = {
-						name: event.name,
-						location: event.place.location.street + " " + event.place.location.city + ", " + event.place.location.state,
-						facebook_id: event.id,
-						host: event.place.name,
-						start_time: event.start_time,
-						category: event.category,
-						description: event.description,
-						image: event.cover
-					};
-					//CREATE ONE EVENT
-					let tags = [];
-					let setting = database.ref("event_sources/" + newEvent.host + "@" + event.place.id + '/eventListing/' + newEvent.name + "@" + newEvent.facebook_id).set(newEvent);
-					setting.then(function() {
-						res.send({"status": "success", "message": "saved event to firebase.", "event": event});
-					}).catch(function() {
-						res.send({"status": "failure", "message": "firebase save on event failed."});
-					});
+				console.log("creating event");
+				let setting = database.ref(dbRef).set(newEvent);
+				//TODO determine if we're doing duplicate shit. lots of stuff is coming in late and I don't know why
+				// add a route hit log at the top to see if multiple requests are being sent
+				setting.then(function() {
+					console.log("saved the event to firebase.");
+				}).catch(function() {
+					console.log("failed to save the event to firebase.");
 				});
-				if (JSON.parse(body).paging && JSON.parse(body).paging.next) {
-					acquireEvents(JSON.parse(body).paging.next);
-				}
 			}
 		});
-	}
+	}).catch( (error) => {
+		console.log(error);
+		console.log("catching the rejection.");
+	});
+}
 
 router.post('/events/:owner', (req, res) => {
 	if (req.body) {
@@ -289,7 +322,6 @@ router.post('/events/:owner', (req, res) => {
 	else {
 		res.send({"status": "failure", "message": "no body given to this route."});
 	}
-		
 });
 
 module.exports = router;

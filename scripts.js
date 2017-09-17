@@ -9,6 +9,7 @@ function getLocation() {
       getEvents(pos.lat, pos.long);
     }, function() {
       console.log("error getting location data.");
+      getEvents(39.7115486, -104.9876288);
     });
   } 
   else {
@@ -17,6 +18,7 @@ function getLocation() {
 }
 
 function getEvents(lat, long) {
+  console.log("getEvents()");
   var data = {
     radius: parseInt(document.getElementById("radius").value),
     types: {
@@ -36,6 +38,9 @@ function getEvents(lat, long) {
       // data.forEach( (event) => {
       //   renderEvent(event);
       // });
+    },
+    failure: function(error) {
+      console.log(error);
     }
   });
 }
