@@ -247,7 +247,7 @@ function getMoreEventsAtLocation(lat, long, queryData, res) {
 				let events = JSON.parse(body).data;
 				// console.log("found " + events.length + " events for " + url);
 				events.forEach(function(event) {
-					event = {
+					let newEvent = {
 						name: event.name,
 						location: event.place.location.street + " " + event.place.location.city + ", " + event.place.location.state,
 						facebook_id: event.id,
@@ -259,25 +259,12 @@ function getMoreEventsAtLocation(lat, long, queryData, res) {
 					};
 					//CREATE ONE EVENT
 					let tags = [];
-					let setting = database.ref("event_sources/" + event.host + "@" + req.params.owner + '/eventListing/' + event.name + "@" + event.facebook_id).set(event);
+					let setting = database.ref("event_sources/" + newEvent.host + "@" + event.place.id + '/eventListing/' + newEvent.name + "@" + newEvent.facebook_id).set(newEvent);
 					setting.then(function() {
 						res.send({"status": "success", "message": "saved event to firebase.", "event": event});
 					}).catch(function() {
 						res.send({"status": "failure", "message": "firebase save on event failed."});
 					});
-					res.send({"saved": event});
-					// request.post({
-			  //           url: '/events/' + event.place.id,
-			  //           form: data
-			  //       }, function (error, response, body) {
-					// 	if (error) {
-					// 		console.log("post error");
-					// 		// console.log(error);
-					// 	}
-					// 	else {
-					// 		// console.log("no post error");
-					// 	}
-					// });
 				});
 				if (JSON.parse(body).paging && JSON.parse(body).paging.next) {
 					acquireEvents(JSON.parse(body).paging.next);
@@ -285,7 +272,6 @@ function getMoreEventsAtLocation(lat, long, queryData, res) {
 			}
 		});
 	}
-
 
 router.post('/events/:owner', (req, res) => {
 	if (req.body) {
@@ -307,37 +293,3 @@ router.post('/events/:owner', (req, res) => {
 });
 
 module.exports = router;
-	// var options = {        
-	//     url: 'https://api.yelp.com/v3/businesses/search?term=music&latitude=39.743805699999996&longitude=-104.9628995',
-	//     method: 'GET',
-	//     headers:{
-	//         Authorization: ' Bearer cUyNgaY2GZCVViu4jW0Eqsm66z0M4VdD9rV-aiVuzA3KFDjJhoQlB8fZ_R2MHHPD7b7FjPZkB7nmUGNkdtiMSIXV5KK7kbSmOPzKMCVq_YdgBf6SNijCJb30jo2YWXYx'            
-	//    }
-	// };
-
-	// request(options, function(error, response, body) {
-	// 	if (error) {
-	// 		console.log(error);
-	// 	}
-	// 	else if (JSON.parse(body)){
-	// 		JSON.parse(body).businesses.forEach(function(business) {
-	// 			getBusinessWebsiteFromYelp(business.url, business.name);
-	// 		});
-	// 	}
-	// 	else {
-	// 		console.log("failed to hit the yelp api");
-	// 	}
-	// });
-	// request(options, function(error, response, body) {
-	// 	if (error) {
-	// 		console.log("error sending a request to the yelp api.");
-	// 	}
-	// 	else if (JSON.parse(body)){
-	// 		JSON.parse(body).businesses.forEach(function(business) {
-	// 			getBusinessWebsiteFromYelp(business.url, business.name);
-	// 		});
-	// 	}
-	// 	else {
-	// 		console.log("failed to hit the yelp api");
-	// 	}
-	// });
