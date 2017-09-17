@@ -239,7 +239,7 @@ function saveEvent(event) {
 	// need to get the geocode lat long for this address
 	let address = "";
 	// TODO: better clean this string for geocoding request
-	if (event.place.location) {
+	if (event.place && event.place.location) {
 		address = (event.place.location.street || "") + " " + event.place.location.city + ", " + event.place.location.state;
 	}
 	var geocodePromise = new Promise ( (resolve, reject) => {
