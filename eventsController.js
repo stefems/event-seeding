@@ -283,7 +283,7 @@ function saveEvent(event) {
 			tag: event.rageLifeTag || "",
 			coordinates: coordinates
 		};
-		let dbRef = "event_sources/" + event.place.id + '/eventListing/' + newEvent.facebook_id;
+		let dbRef = "ragelifemap/" + event.place.id + '/eventListing/' + newEvent.facebook_id;
 		database.ref(dbRef).once("value", function(snapshot) {
 			if (snapshot.val()) {
 				console.log("event already created.");
